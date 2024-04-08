@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        input[type="text"], input[type="datetime-local"] {
+            width: calc(100% - 12px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        input[type="submit"] {
+            background-color: #4caf50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>URL Shortener</h2>
+    <label for="originalUrl">Original URL:</label>
+    <input type="text" id="originalUrl" name="originalUrl" required>
+    <label for="expiresAt">Expiration Date and Time:</label>
+    <input type="datetime-local" id="expiresAt" name="expiresAt">
+    <small style="display:block;margin-bottom:5px;">(By default, expire time is 2 mins from now)</small>
+    <input type="submit" value="Shorten URL" onclick="shortenUrl()">
+    <p id="shortUrl"></p>
+    <p id="errorMessage" class="error-message" style="display: none;"></p>
+
+    <label for="shortUrlToDelete">Short URL to Delete:</label>
+    <input type="text" id="shortUrlToDelete" name="shortUrlToDelete" required>
+    <input type="submit" value="Delete URL" onclick="deleteUrl()">
+    <p id="errorMessageForDelete" class="error-message" style="display: none;"></p>
+</div>
+
+<script>
+    function shortenUrl() {
+        var originalUrl = document.getElementById("originalUrl").value;
+        var expiresAt = document.getElementById("expiresAt").value;
+
+        var requestData = {
+            originalUrl: originalUrl,
+            expiresAt: expiresAt
+        };
+
+        fetch('/url/short', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error: Please specify correct URL and expiry time');
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById("shortUrl").innerHTML = "Shortened URL: <a href='url/" + data.shortUrl + "' target='_blank'>" + data.shortUrl + "</a>";
+                document.getElementById("errorMessage").style.display = "none";
+            })
+            .catch(error => {
+                document.getElementById("errorMessage").innerText = error.message;
+                document.getElementById("errorMessage").style.display = "block";
+            });
+    }
+
+     function deleteUrl() {
+            var shortUrl = document.getElementById("shortUrlToDelete").value;
+
+            fetch('/url/' + shortUrl, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(error => { throw new Error('Please enter valid & existing url'); });
+                }
+                document.getElementById("shortUrlToDelete").value = ""; // Clear input field after successful deletion
+                document.getElementById("errorMessageForDelete").style.display = "none";
+
+                const Toast = Swal.mixin({
+					toast: true,
+					position: 'top-end',
+					showConfirmButton: false,
+					timer: 3000,
+					timerProgressBar: true,
+					didOpen: (toast) => {
+						toast.addEventListener('mouseenter', Swal.stopTimer)
+						toast.addEventListener('mouseleave', Swal.resumeTimer)
+					}
+				})
+
+				Toast.fire({
+					icon: 'success',
+					title: 'URL deleted successfully'
+				})
+            })
+            .catch(error => {
+                document.getElementById("errorMessageForDelete").innerText = "Error: " + error.message;
+                document.getElementById("errorMessageForDelete").style.display = "block";
+            });
+        }
+</script>
+</body>
+</html>
